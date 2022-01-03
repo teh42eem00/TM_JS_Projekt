@@ -1,12 +1,33 @@
 from tkinter import *
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from decimal import *
 
-possible_coins = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5]
+possible_coins = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
 
 
 def decimal_2places_rounded(value_before):
     return Decimal(round(value_before, 2))
+
+
+def return_change(to_return, coins=None):
+    if coins is None:
+        coins = [.01, .02, .05, .1, .2, .5, 1.0, 2.0, 5.0]
+    flag = None
+    for c in coins:
+        if c == to_return:
+            return c
+        if c < to_return:
+            flag = c
+    temp_balance = round(to_return - flag, 2)
+    return [flag] + [return_change(temp_balance)]
+
+
+def flatten(nested_list):
+    for item in nested_list:
+        try:
+            yield from flatten(item)
+        except TypeError:
+            yield item
 
 
 class Coin:
@@ -31,8 +52,10 @@ class CoinStorage:
             print("Przeslany obiekt nie jest moneta!")
 
     def return_coins(self):
+        returned_coins_txt = ""
         while len(self.__coin_list):
-            print("Zwracam monete o wartosci " + str(self.__coin_list.pop().get_value()) + " zl.")
+            returned_coins_txt += "Zwracam monete o wartosci " + str(self.__coin_list.pop().get_value()) + " zl.\n"
+        return returned_coins_txt
 
     def coin_sum(self):
         counted_coins = 0
@@ -86,34 +109,21 @@ class ItemStorage:
         else:
             print("Przeslany obiekt nie jest przedmiotem!")
 
-    def buy_item(self, chosen_item_number, money_placed):
+    def get_item_price(self, chosen_item_number):
         if 50 >= chosen_item_number >= 30:
             selected_item = next(
                 (i for i, item in enumerate(self.__item_list) if item.get_number() == chosen_item_number), -1)
-            selected_item_name = self.__item_list[selected_item].get_name()
             selected_item_price = self.__item_list[selected_item].get_price()
-            if money_placed >= selected_item_price:
-                print("Zakup " + selected_item_name + " udany")
-                print("Wydaje reszte " + str(money_placed - selected_item_price))
-            else:
-                print("Za malo srodkow, produkt kosztuje " + str(selected_item_price))
+            return selected_item_price
 
-
-# class BuyersChoice:
-#     def __init__(self):
-#         self.__choice = 0
-#
-#     def get_choice(self):
-#         return self.__choice
-#
-#     def check_digits(self):
-#         return len(str(self.__choice))
-#
-#     def add_digit(self, sent_digit):
-#         if len(str(self.__choice)) == 0 or self.__choice == 0:
-#             self.__choice = int(str(sent_digit))
-#         elif (len(str(self.__choice))) == 1:
-#             self.__choice = int(str(self.__choice) + str(sent_digit))
+    def buy_item(self, chosen_item_number, money_placed):
+        selected_item_price = self.get_item_price(chosen_item_number)
+        if money_placed >= selected_item_price:
+            print("Zakup udany")
+            rest = float(money_placed - selected_item_price)
+            print("Wydaje reszte " + str(return_change(rest)))
+        else:
+            print("Za malo srodkow, produkt kosztuje " + str(selected_item_price))
 
 
 class MachinePanel:
@@ -140,7 +150,7 @@ class MachinePanel:
          in range(9)]
         ttk.Button(self._mainframe, text="0", command=lambda: self.action_on_choice(0)).grid(row=5, column=1)
         # Dodanie przycisku sprawdzenia wartości zawartości
-        ttk.Button(self._mainframe, text="Przerwij", command=lambda: machine_coins.return_coins()).grid(column=0, row=5)
+        ttk.Button(self._mainframe, text="Przerwij", command=lambda: self.action_on_cancel()).grid(column=0, row=5)
         ttk.Label(self._mainframe, textvariable=self._money_amount).grid(column=0, row=0)
         ttk.Label(self._mainframe, textvariable=self._item_choice).grid(column=0, row=1)
         self._window.mainloop()
@@ -153,11 +163,18 @@ class MachinePanel:
         elif len(self._buyers_choice) == 1:
             self._buyers_choice += choice
             self._item_choice.set(self._buyers_choice)
-            machine.buy_item(int(self._buyers_choice), machine_coins.coin_sum())
+            if machine_coins.coin_sum() < machine.get_item_price(int(self._buyers_choice)):
+                messagebox.showinfo("Koszt wynosi", str(machine.get_item_price(int(self._buyers_choice))))
+            else:
+                machine.buy_item(int(self._buyers_choice), machine_coins.coin_sum())
 
     def action_on_money(self, money):
         machine_coins.add_coin(Coin(money))
         self._money_amount.set(machine_coins.coin_sum())
+
+    def action_on_cancel(self):
+        messagebox.showinfo("Zwrot monet", machine_coins.return_coins())
+        self._money_amount.set("")
 
 
 pepsi = Item("Pepsi", 30, 3.50, 5)
