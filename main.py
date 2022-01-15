@@ -13,19 +13,6 @@ def decimal_2places_rounded(value_before):
     return Decimal(round(value_before, 2))
 
 
-# def return_change(to_return, coins=None):
-#     if coins is None:
-#         coins = [.01, .02, .05, .1, .2, .5, 1.0, 2.0, 5.0]
-#     flag = None
-#     for c in coins:
-#         if c == to_return:
-#             return c
-#         if c < to_return:
-#             flag = c
-#     if flag is not None:
-#         temp_balance = round(to_return - Decimal(flag), 2)
-#         return [flag] + [return_change(temp_balance)]
-
 def return_change(coins, to_return, coin_index=0):
     if to_return == 0:
         return []  # sukces gdy pozostalo 0 do zwrocenia
