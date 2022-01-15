@@ -5,43 +5,44 @@ from decimal import *
 possible_coins = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0]
 
 
-def check_arrays(money_to_give, rest_available):
-    counter = 0
-    temp = rest_available.copy()
-    for money in money_to_give:
-        print("Trzeba wydac:", money)
-        if money in rest_available:
-            rest_available.remove(money)
-            counter += 1
-            print("Posiadane monety do wydania reszty: ", rest_available)
-            print("Licznik: ", counter)
-
-    if counter == len(money_to_give):
-        print("Jest ok, mozna wydac reszte")
-        print("Nowa tablica z pieniedzmi do reszty: ", rest_available)
-        return True
-    else:
-        print("Brak mozliwosci wydania reszty!")
-        print("W zwiazku z tym stara tablica: ", temp)
-        return False
+def unpack_dict(value, count):
+    return value, count
 
 
 def decimal_2places_rounded(value_before):
     return Decimal(round(value_before, 2))
 
 
-def return_change(to_return, coins=None):
-    if coins is None:
-        coins = [.01, .02, .05, .1, .2, .5, 1.0, 2.0, 5.0]
-    flag = None
-    for c in coins:
-        if c == to_return:
-            return c
-        if c < to_return:
-            flag = c
-    if flag is not None:
-        temp_balance = round(to_return - flag, 2)
-        return [flag] + [return_change(temp_balance)]
+# def return_change(to_return, coins=None):
+#     if coins is None:
+#         coins = [.01, .02, .05, .1, .2, .5, 1.0, 2.0, 5.0]
+#     flag = None
+#     for c in coins:
+#         if c == to_return:
+#             return c
+#         if c < to_return:
+#             flag = c
+#     if flag is not None:
+#         temp_balance = round(to_return - Decimal(flag), 2)
+#         return [flag] + [return_change(temp_balance)]
+
+def return_change(coins, to_return, coin_index=0):
+    if to_return == 0:
+        return []  # sukces gdy pozostalo 0 do zwrocenia
+    if coin_index >= len(coins):
+        return None  # nie udalo sie znalezc reszty
+    coin = coins[coin_index]
+    coin_index += 1
+    # rozpoczynam od pobierania jak najwiekszej ilosci monet
+    can_take = min(to_return // coin["value"], coin["count"])
+    # pobieram monety az do osiagniecia kwoty 0
+    for counter in range(can_take, -1, -1):  # odliczanie do 0
+        # rekursywnie przechodze do kolejnych monet w celu dobrania odpowiednich kolejnych nominalow
+        change = return_change(coins, to_return - coin["value"] * counter, coin_index)
+        if change is not None:  # jezeli rekursywny przypadek nie zwrocil None
+            if counter:  # i zostalo cos naliczone to dodaj do reszty
+                return change + [{"value": coin["value"], "count": counter}]
+            return change  # lub zwroc reszte
 
 
 def flatten(nested_list):
@@ -73,14 +74,20 @@ class CoinStorage:
         else:
             print("Przeslany obiekt nie jest moneta!")
 
+    def add_multiple_coins(self, coin_value, coin_count):
+        for ccount in range(coin_count):
+            self.__coin_list.append(Coin(coin_value))
+
     def return_array_of_value(self):
         value_list = [float(o.get_value()) for o in self.__coin_list]
         return value_list
 
-    def return_rest(self, rest_coin_value):
-        selected_coin = next(
-            (i for i, item in enumerate(self.__coin_list) if item.get_value() == rest_coin_value), -1)
-        rest_coin_txt = "Wydaje reszte o wartosci " + str(self.__coin_list.pop(selected_coin).get_value()) + "zl."
+    def return_rest(self, rest_coin_value, rest_coin_count):
+        rest_coin_txt = ""
+        for rcount in range(rest_coin_count):
+            selected_coin = next(
+                (i for i, item in enumerate(self.__coin_list) if item.get_value() == rest_coin_value / 100), -1)
+            rest_coin_txt = "Wydaje reszte o wartosci " + str(self.__coin_list.pop(selected_coin).get_value()) + "zl."
         return rest_coin_txt
 
     def return_coins(self):
@@ -169,30 +176,30 @@ class ItemStorage:
         if money_placed >= selected_item_price:
             rest = money_placed - selected_item_price
             print("Obliczona reszta do wydania: ", rest)
-            if rest != 0:
-                rest_list = return_change(rest, machine_rest_coins.return_array_of_value())
-                print("Reszta bedzie wydana monetami ", rest_list)
-
-                if rest_list is not list and rest_list in machine_rest_coins.return_array_of_value():
-                    messagebox.showinfo("Sukces", "Zakup produktu o numerze " + str(chosen_item_number) + " udany")
-                    messagebox.showinfo("Reszta", "Wydaje reszte:\n" + str(machine_rest_coins.return_rest(rest_list)))
-                    machine_rest_coins.take_money_inside(machine_coins)
-                elif rest_list is None:
-                    messagebox.showinfo("Nie mozna wydac reszty", "zakup anulowany!")
-                    messagebox.showinfo("Zwrot monet", machine_coins.return_coins())
-                elif check_arrays(rest_list, machine_rest_coins.return_array_of_value()):
-                    rest_list = list(flatten(rest_list))
-                    rest_text = ""
-                    for elem in rest_list:
-                        rest_text += machine_rest_coins.return_rest(elem)
-                    messagebox.showinfo("Reszta", "Wydaje reszte:\n" + str(rest_text))
-                    machine_rest_coins.take_money_inside(machine_coins)
-                else:
-                    messagebox.showinfo("Nie mozna wydac reszty", "zakup anulowany!")
-                    messagebox.showinfo("Zwrot monet", machine_coins.return_coins())
-            else:
+            if rest == 0:
                 messagebox.showinfo("Sukces", "Zakup produktu o numerze " + str(chosen_item_number) + " udany")
                 machine_rest_coins.take_money_inside(machine_coins)
+            else:
+                rest_available_coins = machine_rest_coins.return_array_of_value()  # lista wartosci
+                rest_available_coins = [int(i * 100) for i in rest_available_coins]
+                counted_rest_coins = {}  # slownik przechowujacy monety w formie {wartosc , ilosc}
+                for r in rest_available_coins:  # zliczenie ilosci monet dostepnych do wydania reszty
+                    counted_rest_coins[r] = counted_rest_coins.get(r, 0) + 1
+                counted_rest_coins_list = list()  # lista przechowujaca slowniki zliczonych monet
+                for key, (d_value, d_count) in enumerate(counted_rest_coins.items()):  # dodanie slownikow do listy
+                    d = {"value": d_value, "count": d_count}
+                    counted_rest_coins_list.append(d)
+                returned_change_dict_list = return_change(counted_rest_coins_list, int(rest * 100))  # obliczenie reszty
+                if returned_change_dict_list is None:  # jezeli nie udalo sie obliczyc reszty zwroc blad
+                    messagebox.showinfo("Brak monet!", "Nie mozna wydac reszty, zakup anulowany!")
+                    messagebox.showinfo("Zwrot monet", machine_coins.return_coins())
+                else:  # w przeciwnym razie pobierz pieniadze i wydaj reszte
+                    print(returned_change_dict_list)
+                    for rc in returned_change_dict_list:  # dla wszystkich slownikow reszty (nominal, ilosc)
+                        print(
+                            machine_rest_coins.return_rest(*unpack_dict(**rc)))  # zwroc reszte z rozpakowanego slownika
+                        messagebox.showinfo("Sukces", "Zakup produktu o numerze " + str(chosen_item_number) + " udany")
+                        machine_rest_coins.take_money_inside(machine_coins)
 
 
 class MachinePanel:
@@ -256,11 +263,13 @@ class MachinePanel:
 
 
 pepsi = Item("Pepsi", 30, 3, 5)
+mala_tania_woda = Item("Mala tania woda", 47, 1, 5)
 sok = Item("Sok pomaranczowy", 48, 3.5, 5)
 woda_gaz = Item("Woda gazowana", 49, 2.5, 5)
 woda_niegaz = Item("Woda niegazowana", 50, 2, 5)
 machine = ItemStorage()
 machine.add_item(pepsi)
+machine.add_item(mala_tania_woda)
 machine.add_item(sok)
 machine.add_item(woda_gaz)
 machine.add_item(woda_niegaz)
