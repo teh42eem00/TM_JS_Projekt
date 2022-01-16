@@ -87,26 +87,26 @@ class MachinePanel:
         for coin in logic.possible_coins:
             # lambda
             ttk.Button(self._mainframe, text="Wrzuć " + str(coin) + "zł",
-                       command=lambda lcoin=coin: self._action_on_money(lcoin)).grid(column=4, row=self._coin_row)
+                       command=lambda lcoin=coin: self.action_on_money(lcoin)).grid(column=4, row=self._coin_row)
             self._coin_row += 1
 
         # Dodanie przyciskow do wybierania towaru
         # lambda
         [ttk.Button(self._mainframe, text=str(digit + 1),
-                    command=lambda ldigit=digit: self._action_on_choice(ldigit + 1)).grid(row=digit // 3 + 2,
-                                                                                          column=digit % 3) for digit in
+                    command=lambda ldigit=digit: self.action_on_choice(ldigit + 1)).grid(row=digit // 3 + 2,
+                                                                                         column=digit % 3) for digit in
          range(9)]
         # lambda
-        ttk.Button(self._mainframe, text="0", command=lambda: self._action_on_choice(0)).grid(row=5, column=1)
+        ttk.Button(self._mainframe, text="0", command=lambda: self.action_on_choice(0)).grid(row=5, column=1)
 
         # Dodanie przycisku przerwania transakcji, zwraca wplacone monety
         ttk.Button(self._mainframe, text="Przerwij",
-                   command=lambda: self._action_on_cancel()).grid(column=0, row=5)  # lambda
+                   command=lambda: self.action_on_cancel()).grid(column=0, row=5)  # lambda
 
         # Przyciski wypisujace w konsoli monety wplacone przez uzytkownika i te dostepne do wydawania reszty
         # lambda
-        ttk.Button(self._mainframe, text="Monety - Reszta",
-                   command=lambda: print(self._machine_coins_change.return_array_of_value())).grid(column=0, row=6)
+        # ttk.Button(self._mainframe, text="Monety - Reszta",
+        #           command=lambda: print(self._machine_coins_change.return_array_of_value())).grid(column=0, row=6)
         # lambda
         # ttk.Button(self._mainframe, text="Monety - Wplacone",
         #          command=lambda: print(self._machine_coins_input.return_array_of_value())).grid(column=0, row=7)
@@ -118,7 +118,11 @@ class MachinePanel:
         # Glowna petla
         self._window.mainloop()
 
-    def _action_on_choice(self, choice):
+    def quit(self):
+        """Metoda zamykajaca okno"""
+        self._window.destroy()
+
+    def action_on_choice(self, choice):
         """Metoda wykonywana w momencie wyboru numeru towaru. Gdy wybor mial dlugosc 0 lub 2 to ustawiamy dany kod towaru
         od nowa. Kod jest zmieniany na string i sklejany z dwoch fragmentow. W momencie gdy po kliknieciu wybor mial jeden
         znak, zostaje doklejony drugi i nastepuje przejscie do etapu weryfikacji kod towaru i ewentualnego zakupu. W metodzie
@@ -172,7 +176,7 @@ class MachinePanel:
         except WrongProductNumberError as wrong_number:
             messagebox.showinfo(*wrong_number.__str__())
 
-    def _action_on_money(self, money):
+    def action_on_money(self, money):
         """Metoda wykonywana w momencie dodawania przez uzytkownika pieniedzy (poprzez klikanie w dane nominaly na panelu).
         Pieniadze trafiaja do kontenera przeznaczonego na wplaty uzytkownika. W tej metodzie zostaje takze ustawiana
         wartosc wplaconych pieniedzy wyswietlana na ekranie (suma monet w kontenerze).
@@ -185,7 +189,7 @@ class MachinePanel:
         # ustawienie sumy wplaconych monet na wyswietlaczu
         self._money_amount.set(str(self._machine_coins_input.coin_sum()))
 
-    def _action_on_cancel(self):
+    def action_on_cancel(self):
         """Metoda wykonywana w momencie klikniecia przez uzytkownika PRZERWIJ. Wypisuje ona komunikat z informacja o zwrocie
         monet (dane wypisywane sa zwraca z funkcji return_coins (z klasy CoinStorage). Po zwrocie monet nastepuje wyczyszczenie
         wyswietlacza z wartoscia wplaconych monet."""
