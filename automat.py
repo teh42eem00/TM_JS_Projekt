@@ -1,7 +1,7 @@
 import interface
 import logic
 
-pepsi = logic.Item("Pepsi", 30, 3, 5)
+pepsi = logic.Item("Pepsi", 30, 3, 0)
 mala_tania_woda = logic.Item("Mala tania woda", 47, 1, 5)
 sok = logic.Item("Sok pomaranczowy", 48, 3.5, 5)
 woda_gaz = logic.Item("Woda gazowana", 49, 2.5, 5)
